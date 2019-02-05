@@ -1,4 +1,7 @@
-use std::ops::{Generator, GeneratorState};
+use std::{
+    pin::Pin,
+    ops::{Generator, GeneratorState}
+};
 
 use crate::{
     mapyield::MapYield,
@@ -30,6 +33,56 @@ pub trait GeneratorExt: Generator {
     {
         FilterYield::new(self, pred)
     }
+
+    fn take_while_yield<F>(self, predicate: F) -> TakeWhileYield<Self, F>
+    where
+        Self: Sized,
+        F: FnMut(&Self::Yield) -> bool
+    {
+        TakeWhileYield::new(self, predicate)
+    }
 }
 
 impl <G> GeneratorExt for G where G: Generator {}
+
+pub struct TakeWhileYield<G, P> {
+    complete: bool,
+    gen: G,
+    predicate: P,
+}
+
+impl <G, P> TakeWhileYield<G, P> {
+    pub(crate) fn new(gen: G, predicate: P) -> Self {
+        Self { gen, predicate, complete: false }
+    }
+}
+
+impl <G: Generator, P> Generator for TakeWhileYield<G, P>
+where
+    P: FnMut(&G::Yield) -> bool
+{
+    type Yield = G::Yield;
+    type Return = ();
+
+    fn resume(self: Pin<&mut Self>) -> GeneratorState<Self::Yield, Self::Return> {
+        if self.complete {
+            return GeneratorState::Complete(())
+        }
+
+        unsafe {
+            let _self: &mut Self = self.get_unchecked_mut();
+
+            match Pin::new_unchecked(&mut _self.gen).resume() {
+                GeneratorState::Yielded(y) => {
+                    if (_self.predicate)(&y) {
+                        GeneratorState::Yielded(y)
+                    } else {
+                        _self.complete = true;
+                        GeneratorState::Complete(())
+                    }
+                }
+                _ => GeneratorState::Complete(())
+            }
+        }
+    }
+}
