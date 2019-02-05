@@ -4,5 +4,6 @@ version = "0.1.0"
 authors = ["Dodo <kasper199914@gmail.com>"]
 edition = "2018"
 license = "MIT"
+description = "Library for Generator utilities and combinators"
 
 [dependencies]
