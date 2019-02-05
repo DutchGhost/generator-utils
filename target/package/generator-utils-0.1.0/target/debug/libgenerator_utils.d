@@ -1,0 +1,1 @@
+C:\Users\Kasper\Documents\Rust\githubs\generator-utils\target\package\generator-utils-0.1.0\target\debug\libgenerator_utils.rlib: C:\Users\Kasper\Documents\Rust\githubs\generator-utils\target\package\generator-utils-0.1.0\src\lib.rs
