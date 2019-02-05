@@ -1,7 +1,7 @@
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
-}
+#![feature(generators, generator_trait)]
+
+mod generatorext;
+pub mod mapyield;
+pub mod filteryield;
+
+pub use generatorext::GeneratorExt;
