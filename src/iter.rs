@@ -78,6 +78,23 @@ impl<G: Generator> Iterator for Pin<&mut GenIter<G>> {
     }
 }
 
+/// Creates a new instance of a [`crate::iter::GenIter`] with the provided generator `$x`.
+/// # Examples
+/// ```
+/// #![feature(generators, generator_trait)]
+///
+/// extern crate generator_utils;
+/// use generator_utils::gen_iter;
+/// 
+/// let mut iter = gen_iter! {
+///     let x = 10;
+///     let r = &x;
+///
+///     for i in 0..5u32 {
+///         yield i * *r
+///     }
+/// };
+/// ```
 #[macro_export]
 macro_rules! gen_iter {
     ($($x:tt)*) => {
@@ -92,6 +109,7 @@ macro_rules! gen_iter {
     };
 }
 
+#[macro_export]
 macro_rules! bind_iter {
     ($name:ident = || { $($x:tt)* }) => {
         let mut _iter = gen_iter!($($x)*);
@@ -149,13 +167,15 @@ mod tests {
 
         let mut vec = vec![1, 2, 3, 4, 5];
 
-        bind_iter!(iterable = || {
-            let v: &mut Vec<i32> = &mut vec;
+        bind_iter!(
+            iterable = || {
+                let v: &mut Vec<i32> = &mut vec;
 
-            for item in v {
-                yield item
+                for item in v {
+                    yield item
+                }
             }
-        });
+        );
 
         assert!(iterable.count() == 5);
     }
