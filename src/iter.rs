@@ -3,16 +3,54 @@ use std::{
     pin::Pin,
 };
 
-#[derive(Debug)]
+/// A wrapper struct around Generators,
+/// providing a safe implementation of the [`Iterator`] trait.
 pub struct GenIter<G>(Option<G>);
 
-impl<G: Generator> GenIter<G> {
+impl<G: Generator + Unpin> GenIter<G> {
+    /// Creates a new `GenIter` instance from a generator.
+    /// The returned instance can be iterated over,
+    /// consuming the generator.
+    #[inline]
     pub fn new(gen: G) -> Self {
         Self(Some(gen))
     }
 }
 
-impl<'a, G: Generator> Iterator for Pin<&mut GenIter<G>> {
+impl<G: Generator + Unpin> Iterator for GenIter<G> {
+    type Item = G::Yield;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        Pin::new(self).next()
+    }
+}
+
+impl<G: Generator> GenIter<G> {
+    /// Creates a new `GenIter` instance from a generator.
+    ///
+    /// The returned instance can be iterated over,
+    /// consuming the generator.
+    ///
+    /// # Safety
+    /// This function is marked unsafe,
+    /// because the caller must ensure the generator is in a valid state.
+    /// A valid state means that the generator has not been moved ever since it's creation.
+    #[inline]
+    pub unsafe fn new_unchecked(gen: G) -> Self {
+        Self(Some(gen))
+    }
+
+    /// Creates a new `GenIter` instance from a Pinned, Boxed generator.
+    /// Te returned instance can be iterated over,
+    /// consuming the generator.
+    #[inline]
+    pub fn pinned(gen: Pin<Box<G>>) -> GenIter<Pin<Box<G>>> {
+        Self(Some(gen))
+    }
+}
+
+impl<G: Generator> Iterator for Pin<&mut GenIter<G>> {
     type Item = G::Yield;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -40,73 +78,47 @@ impl<'a, G: Generator> Iterator for Pin<&mut GenIter<G>> {
     }
 }
 
-impl<G> Iterator for GenIter<G>
-where
-    G: Generator + Unpin,
-{
-    type Item = G::Yield;
+mod tests {
+    use super::GenIter;
 
-    fn next(&mut self) -> Option<Self::Item> {
-        Pin::new(self).next()
-    }
-}
+    #[test]
+    fn iter_movable_generator() {
+        let mut iter = GenIter::new(|| {
+            for i in 0..5u32 {
+                yield i
+            }
+        });
 
-pub trait AsIterator {
-    type Item;
-    type IntoIter: Iterator<Item = Self::Item>;
-
-    fn as_iterator(self) -> Self::IntoIter;
-}
-
-impl<G> AsIterator for G
-where
-    G: Generator + Unpin,
-{
-    type Item = G::Yield;
-    type IntoIter = GenIter<Self>;
-
-    fn as_iterator(self) -> Self::IntoIter {
-        GenIter::new(self)
-    }
-}
-
-#[test]
-fn test_iterable_unpinnable_generator() {
-    let mut g = || {
-        for i in 0..5u32 {
-            yield i
+        for (n, i) in (0..5).zip(iter.by_ref()) {
+            assert!(n == i);
         }
-    };
 
-    let mut iter = g.as_iterator();
-
-    for (n, i) in (0..5).zip(iter.by_ref()) {
-        assert!(n == i);
+        // Assert no panic happens when we call next(), and the generator already has completed.
+        assert!(iter.next().is_none());
     }
 
-    // we've gone trough all items of the generator, and we don't panick if we still call .next()
-    assert!(iter.next().is_none());
-}
+    #[test]
+    fn iter_static_generator() {
+        use std::pin::Pin;
 
-#[test]
-fn test_iterable_not_unpinnable_generator() {
-    let mut g = static || {
-        let x = 10;
-        let r = &x;
+        let mut iter = unsafe {
+            GenIter::new_unchecked(static || {
+                let x = 10;
+                let r = &x;
 
-        for i in 0..5u32 {
-            yield i * *r
+                for i in 0..5u32 {
+                    yield i * *r
+                }
+            })
+        };
+
+        let mut iter = unsafe { Pin::new_unchecked(&mut iter) };
+
+        for (n, i) in (0..5).map(|n| n * 10).zip(iter.by_ref()) {
+            assert!(n == i);
         }
-    };
 
-    let mut iter = GenIter::new(g);
-
-    // we never move the Generator
-    let mut iter = unsafe { Pin::new_unchecked(&mut iter) };
-
-    for (n, i) in (0..5).map(|n| n * 10).zip(iter.by_ref()) {
-        assert!(n == i);
+        // Assert no panic happens when we call next(), and the generator already has completed.
+        assert!(iter.next().is_none())
     }
-
-    assert!(iter.next().is_none())
 }
