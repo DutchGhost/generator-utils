@@ -11,19 +11,21 @@ impl<G: Generator> GenIter<G> {
     }
 }
 
-impl<G: Generator> Iterator for GenIter<G> {
+impl<'a, G: Generator> Iterator for Pin<&mut GenIter<G>> {
     type Item = G::Yield;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let pinned: Option<Pin<&mut G>> = self
-            .0
-            .as_mut()
-            .map(|gen| unsafe { Pin::new_unchecked(gen) });
 
-        match pinned.map(Generator::resume) {
+        let _self: Pin<&mut GenIter<G>> = self.as_mut();
+
+        let mut gen: Pin<&mut Option<G>> = unsafe { _self.map_unchecked_mut(|geniter| &mut geniter.0) };
+
+        let gen: Option<Pin<&mut G>> = Option::as_pin_mut(gen);
+
+        match gen.map(Generator::resume) {
             Some(GeneratorState::Yielded(y)) => Some(y),
             Some(GeneratorState::Complete(_)) => {
-                self.0 = None;
+                self.set(GenIter(None));
                 None
             }
             None => None,
