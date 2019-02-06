@@ -1,9 +1,9 @@
 use std::{
     ops::{Generator, GeneratorState},
     pin::Pin,
-    iter::IntoIterator,
 };
 
+#[derive(Debug)]
 pub struct GenIter<G>(Option<G>);
 
 impl<G: Generator> GenIter<G> {
@@ -16,10 +16,16 @@ impl<'a, G: Generator> Iterator for Pin<&mut GenIter<G>> {
     type Item = G::Yield;
 
     fn next(&mut self) -> Option<Self::Item> {
+        let this: Pin<&mut GenIter<G>> = self.as_mut();
 
-        let _self: Pin<&mut GenIter<G>> = self.as_mut();
-
-        let gen: Pin<&mut Option<G>> = unsafe { _self.map_unchecked_mut(|geniter| &mut geniter.0) };
+        // This should be safe.
+        // this Iterator implementation is on a Pin<&mut GenIter<G>> where G: Generator.
+        // In order to acquire such a Pin<&mut GenIter<G>> if G does *NOT* implement Unpin,
+        // the unsafe `new_unchecked` function from the Pin type must be used anyway.
+        //
+        // Note that if G: Unpin, the Iterator implementation of GenIter<G> itself is used,
+        // which just creates a Pin safely, and then delegates to this implementation.
+        let gen: Pin<&mut Option<G>> = unsafe { this.map_unchecked_mut(|geniter| &mut geniter.0) };
 
         let gen: Option<Pin<&mut G>> = Option::as_pin_mut(gen);
 
@@ -34,7 +40,10 @@ impl<'a, G: Generator> Iterator for Pin<&mut GenIter<G>> {
     }
 }
 
-impl <G> Iterator for GenIter<G> where G: Generator + Unpin {
+impl<G> Iterator for GenIter<G>
+where
+    G: Generator + Unpin,
+{
     type Item = G::Yield;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -49,9 +58,9 @@ pub trait AsIterator {
     fn as_iterator(self) -> Self::IntoIter;
 }
 
-impl <G> AsIterator for G
+impl<G> AsIterator for G
 where
-    G: Generator + Unpin
+    G: Generator + Unpin,
 {
     type Item = G::Yield;
     type IntoIter = GenIter<Self>;
@@ -91,7 +100,7 @@ fn test_iterable_not_unpinnable_generator() {
     };
 
     let mut iter = GenIter::new(g);
-    
+
     // we never move the Generator
     let mut iter = unsafe { Pin::new_unchecked(&mut iter) };
 
