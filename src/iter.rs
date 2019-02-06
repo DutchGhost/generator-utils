@@ -42,15 +42,34 @@ impl <G> Iterator for GenIter<G> where G: Generator + Unpin {
     }
 }
 
+pub trait AsIterator {
+    type Item;
+    type IntoIter: Iterator<Item = Self::Item>;
+
+    fn as_iterator(self) -> Self::IntoIter;
+}
+
+impl <G> AsIterator for G
+where
+    G: Generator + Unpin
+{
+    type Item = G::Yield;
+    type IntoIter = GenIter<Self>;
+
+    fn as_iterator(self) -> Self::IntoIter {
+        GenIter::new(self)
+    }
+}
+
 #[test]
-fn test_iter() {
+fn test_iterable_unpinnable_generator() {
     let mut g = || {
         for i in 0..5u32 {
             yield i
         }
     };
 
-    let mut iter = GenIter::new(g);
+    let mut iter = g.as_iterator();
 
     for (n, i) in (0..5).zip(iter.by_ref()) {
         assert!(n == i);
@@ -58,4 +77,27 @@ fn test_iter() {
 
     // we've gone trough all items of the generator, and we don't panick if we still call .next()
     assert!(iter.next().is_none());
+}
+
+#[test]
+fn test_iterable_not_unpinnable_generator() {
+    let mut g = static || {
+        let x = 10;
+        let r = &x;
+
+        for i in 0..5u32 {
+            yield i * *r
+        }
+    };
+
+    let mut iter = GenIter::new(g);
+    
+    // we never move the Generator
+    let mut iter = unsafe { Pin::new_unchecked(&mut iter) };
+
+    for (n, i) in (0..5).map(|n| n * 10).zip(iter.by_ref()) {
+        assert!(n == i);
+    }
+
+    assert!(iter.next().is_none())
 }
