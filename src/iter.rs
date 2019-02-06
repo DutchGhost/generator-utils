@@ -78,6 +78,29 @@ impl<G: Generator> Iterator for Pin<&mut GenIter<G>> {
     }
 }
 
+#[macro_export]
+macro_rules! gen_iter {
+    ($($x:tt)*) => {
+
+        // Safe, the Generator is directly passed into new_unchecked,
+        // so it has not been moved
+        unsafe {
+            $crate::iter::GenIter::new_unchecked(static || {
+                $($x)*
+            })
+        }
+    };
+}
+
+macro_rules! bind_iter {
+    ($name:ident = || { $($x:tt)* }) => {
+        let mut _iter = gen_iter!($($x)*);
+
+        // Safe, we just created the GenIter struct,
+        // and have not moved it.
+        let $name = unsafe { Pin::new_unchecked(&mut _iter) };
+    }
+}
 mod tests {
     use super::GenIter;
 
@@ -101,15 +124,13 @@ mod tests {
     fn iter_static_generator() {
         use std::pin::Pin;
 
-        let mut iter = unsafe {
-            GenIter::new_unchecked(static || {
-                let x = 10;
-                let r = &x;
+        let mut iter = gen_iter! {
+            let x = 10;
+            let r = &x;
 
-                for i in 0..5u32 {
-                    yield i * *r
-                }
-            })
+            for i in 0..5u32 {
+                yield i * *r
+            }
         };
 
         let mut iter = unsafe { Pin::new_unchecked(&mut iter) };
@@ -120,5 +141,22 @@ mod tests {
 
         // Assert no panic happens when we call next(), and the generator already has completed.
         assert!(iter.next().is_none())
+    }
+
+    #[test]
+    fn iter_over_vec() {
+        use std::pin::Pin;
+
+        let mut vec = vec![1, 2, 3, 4, 5];
+
+        bind_iter!(iterable = || {
+            let v: &mut Vec<i32> = &mut vec;
+
+            for item in v {
+                yield item
+            }
+        });
+
+        assert!(iterable.count() == 5);
     }
 }
