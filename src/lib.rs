@@ -1,7 +1,8 @@
 #![feature(generators, generator_trait)]
 
-mod generatorext;
-pub mod mapyield;
 pub mod filteryield;
+mod generatorext;
+pub mod iter;
+pub mod mapyield;
 
 pub use generatorext::GeneratorExt;

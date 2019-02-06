@@ -1,6 +1,6 @@
 use std::{
-    pin::Pin,
     ops::{Generator, GeneratorState},
+    pin::Pin,
 };
 
 #[derive(Clone)]
@@ -9,15 +9,15 @@ pub struct MapYield<G, F> {
     f: F,
 }
 
-impl <G, F> MapYield<G, F> {
+impl<G, F> MapYield<G, F> {
     pub(crate) fn new(g: G, f: F) -> Self {
         Self { g, f }
     }
 }
 
-impl <G: Generator, F, O> Generator for MapYield<G, F>
+impl<G: Generator, F, O> Generator for MapYield<G, F>
 where
-    F: FnMut(G::Yield) -> O
+    F: FnMut(G::Yield) -> O,
 {
     type Yield = O;
     type Return = G::Return;

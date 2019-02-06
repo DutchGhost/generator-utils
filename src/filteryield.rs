@@ -1,6 +1,6 @@
 use std::{
-    pin::Pin,
     ops::{Generator, GeneratorState},
+    pin::Pin,
 };
 
 pub struct FilterYield<G, F> {
@@ -8,15 +8,15 @@ pub struct FilterYield<G, F> {
     predicate: F,
 }
 
-impl <G, F> FilterYield<G, F> {
+impl<G, F> FilterYield<G, F> {
     pub(crate) fn new(gen: G, predicate: F) -> Self {
         Self { gen, predicate }
     }
 }
 
-impl <G: Generator, F> Generator for FilterYield<G, F>
+impl<G: Generator, F> Generator for FilterYield<G, F>
 where
-    F: FnMut(&G::Yield) -> bool
+    F: FnMut(&G::Yield) -> bool,
 {
     type Yield = G::Yield;
     type Return = G::Return;
@@ -33,12 +33,10 @@ where
                 match gen.resume() {
                     GeneratorState::Yielded(y) => {
                         if (_self.predicate)(&y) {
-                            break GeneratorState::Yielded(y)
+                            break GeneratorState::Yielded(y);
                         }
                     }
-                    GeneratorState::Complete(r) => {
-                        break GeneratorState::Complete(r)
-                    }
+                    GeneratorState::Complete(r) => break GeneratorState::Complete(r),
                 }
             }
         }
