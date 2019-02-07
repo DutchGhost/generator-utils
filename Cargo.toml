@@ -7,3 +7,4 @@ license = "MIT"
 description = "Library for Generator utilities and combinators"
 
 [dependencies]
+ergo-pin = {git = "https://github.com/Nemo157/ergo-pin-rs.git"}

@@ -1,4 +1,4 @@
-#![feature(generators, generator_trait)]
+#![feature(generators, generator_trait, proc_macro_hygiene, stmt_expr_attributes)]
 
 pub mod filteryield;
 mod generatorext;

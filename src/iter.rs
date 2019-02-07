@@ -119,6 +119,8 @@ macro_rules! bind_iter {
         let $name = unsafe { Pin::new_unchecked(&mut _iter) };
     }
 }
+
+#[cfg(test)]
 mod tests {
     use super::GenIter;
 
@@ -178,5 +180,34 @@ mod tests {
         );
 
         assert!(iterable.count() == 5);
+    }
+
+    #[test]
+    fn ergo_pin() {
+        use ergo_pin::{ergo_pin};
+        use std::ops::Generator;
+
+        fn foo<'a, T: Default>(v: &'a mut Vec<T>) -> GenIter<impl Generator<Yield = &'a mut T, Return = ()>> {
+            gen_iter! {
+                v.insert(0, Default::default());
+                for x in v {
+                    yield x;
+                }
+            }
+        }
+
+        let mut v = vec![1, 2, 3, 4, 5, 6, 7];
+
+        #[ergo_pin] {
+            let mut iter = pin!(foo(&mut v));
+            
+            for (x, n) in iter.by_ref().zip(0..=7) {
+                assert_eq!(*x, n);
+            }
+
+            assert!(iter.next().is_none());
+        }
+
+        assert!(v.len() == 8);
     }
 }
