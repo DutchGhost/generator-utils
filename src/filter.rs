@@ -3,18 +3,19 @@ use std::{
     pin::Pin,
 };
 
-pub struct FilterYield<G, F> {
+pub struct Filter<G, F> {
     gen: G,
     predicate: F,
 }
 
-impl<G, F> FilterYield<G, F> {
+impl<G, F> Filter<G, F> {
+    #[inline]
     pub(crate) fn new(gen: G, predicate: F) -> Self {
         Self { gen, predicate }
     }
 }
 
-impl<G: Generator, F> Generator for FilterYield<G, F>
+impl<G: Generator, F> Generator for Filter<G, F>
 where
     F: FnMut(&G::Yield) -> bool,
 {

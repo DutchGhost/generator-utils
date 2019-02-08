@@ -1,8 +1,17 @@
-#![feature(generators, generator_trait, proc_macro_hygiene, stmt_expr_attributes)]
+#![feature(
+    generators,
+    generator_trait,
+    proc_macro_hygiene,
+    stmt_expr_attributes,
+    existential_type
+)]
 
-pub mod filteryield;
-mod generatorext;
+pub mod filter;
 pub mod iter;
-pub mod mapyield;
+pub mod map;
+pub mod mapped;
+pub mod take;
+pub mod takewhile;
 
+mod generatorext;
 pub use generatorext::GeneratorExt;

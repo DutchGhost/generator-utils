@@ -85,7 +85,7 @@ impl<G: Generator> Iterator for Pin<&mut GenIter<G>> {
 ///
 /// extern crate generator_utils;
 /// use generator_utils::gen_iter;
-/// 
+///
 /// let mut iter = gen_iter! {
 ///     let x = 10;
 ///     let r = &x;
@@ -156,7 +156,7 @@ mod tests {
         let mut iter = unsafe { Pin::new_unchecked(&mut iter) };
 
         for (n, i) in (0..5).map(|n| n * 10).zip(iter.by_ref()) {
-            assert!(n == i);
+            assert_eq!(n, i);
         }
 
         // Assert no panic happens when we call next(), and the generator already has completed.
@@ -184,10 +184,12 @@ mod tests {
 
     #[test]
     fn ergo_pin() {
-        use ergo_pin::{ergo_pin};
+        use ergo_pin::ergo_pin;
         use std::ops::Generator;
 
-        fn foo<'a, T: Default>(v: &'a mut Vec<T>) -> GenIter<impl Generator<Yield = &'a mut T, Return = ()>> {
+        fn foo<'a, T: Default>(
+            v: &'a mut Vec<T>,
+        ) -> GenIter<impl Generator<Yield = &'a mut T, Return = ()>> {
             gen_iter! {
                 v.insert(0, Default::default());
                 for x in v {
@@ -198,9 +200,10 @@ mod tests {
 
         let mut v = vec![1, 2, 3, 4, 5, 6, 7];
 
-        #[ergo_pin] {
+        #[ergo_pin]
+        {
             let mut iter = pin!(foo(&mut v));
-            
+
             for (x, n) in iter.by_ref().zip(0..=7) {
                 assert_eq!(*x, n);
             }
