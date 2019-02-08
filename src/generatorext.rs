@@ -1,8 +1,23 @@
 use std::ops::Generator;
-
+use std::pin::Pin;
 use crate::{filter::Filter, map::Map, mapped::Mapped, take::Take, takewhile::TakeWhile};
 
+use crate::iter::GenIter;
+
 pub trait GeneratorExt: Generator {
+    // Should be safe,
+    // following the idea that this function consumes `self` (moves it),
+    // but in order for Self (the generator) to be invalidated in this function,
+    // some `unsafe {}` must have been used before this function is called.
+    #[inline]
+    fn into_iter(self) -> GenIter<Self>
+    where
+        Self: Sized,
+    {
+        unsafe { GenIter::new_unchecked(self) }
+    }
+
+    #[inline]
     fn by_ref(&mut self) -> &mut Self {
         self
     }
@@ -95,6 +110,22 @@ pub trait GeneratorExt: Generator {
 }
 
 impl<G> GeneratorExt for G where G: Generator {}
+
+pub trait PinGeneratorExt: Generator + Unpin {
+    #[inline]
+    fn iter(&mut self) -> GenIter<&mut Self>
+    {
+        GenIter::new(self)
+    }
+    
+    #[inline]
+    fn pin(&mut self) -> Pin<&mut Self>
+    {
+        Pin::new(self)
+    }
+}
+
+impl <G> PinGeneratorExt for G where G: Generator + Unpin {}
 
 #[cfg(test)]
 mod tests {
