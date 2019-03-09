@@ -9,6 +9,7 @@ pub struct Map<G, F> {
 }
 
 impl<G, F> Map<G, F> {
+    #[inline]
     pub(crate) fn new(g: G, f: F) -> Self {
         Self { g, f }
     }

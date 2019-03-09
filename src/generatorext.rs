@@ -107,6 +107,35 @@ pub trait GeneratorExt: Generator {
     {
         Mapped::new(f(self))
     }
+
+    fn fold_ret<B, F>(mut self, mut init: B, mut f: F) -> (B, Self::Return)
+    where
+        Self: Sized,
+        F: FnMut(B, Self::Yield) -> B
+    {
+        use std::ops::GeneratorState;
+
+        loop {
+            let pin = unsafe { Pin::new_unchecked(&mut self) };
+            
+            match pin.resume() {
+                GeneratorState::Yielded(y) => {
+                    init = f(init, y);
+                }
+                GeneratorState::Complete(r) => {
+                    break (init, r)
+                }
+            }
+        }
+    }
+
+    fn fold<B, F>(self, init: B, f: F, ) -> B
+    where
+        Self: Sized,
+        F: FnMut(B, Self::Yield) -> B,
+    {
+        self.fold_ret(init, f).0
+    }
 }
 
 impl<G> GeneratorExt for G where G: Generator {}
