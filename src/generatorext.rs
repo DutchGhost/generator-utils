@@ -1,6 +1,6 @@
+use crate::{filter::Filter, map::Map, mapped::Mapped, take::Take, takewhile::TakeWhile};
 use std::ops::Generator;
 use std::pin::Pin;
-use crate::{filter::Filter, map::Map, mapped::Mapped, take::Take, takewhile::TakeWhile};
 
 use crate::iter::GenIter;
 
@@ -111,25 +111,23 @@ pub trait GeneratorExt: Generator {
     fn fold_ret<B, F>(mut self, mut init: B, mut f: F) -> (B, Self::Return)
     where
         Self: Sized,
-        F: FnMut(B, Self::Yield) -> B
+        F: FnMut(B, Self::Yield) -> B,
     {
         use std::ops::GeneratorState;
 
         loop {
             let pin = unsafe { Pin::new_unchecked(&mut self) };
-            
+
             match pin.resume() {
                 GeneratorState::Yielded(y) => {
                     init = f(init, y);
                 }
-                GeneratorState::Complete(r) => {
-                    break (init, r)
-                }
+                GeneratorState::Complete(r) => break (init, r),
             }
         }
     }
 
-    fn fold<B, F>(self, init: B, f: F, ) -> B
+    fn fold<B, F>(self, init: B, f: F) -> B
     where
         Self: Sized,
         F: FnMut(B, Self::Yield) -> B,
@@ -142,19 +140,17 @@ impl<G> GeneratorExt for G where G: Generator {}
 
 pub trait PinGeneratorExt: Generator + Unpin {
     #[inline]
-    fn iter(&mut self) -> GenIter<&mut Self>
-    {
+    fn iter(&mut self) -> GenIter<&mut Self> {
         GenIter::new(self)
     }
-    
+
     #[inline]
-    fn pin(&mut self) -> Pin<&mut Self>
-    {
+    fn pin(&mut self) -> Pin<&mut Self> {
         Pin::new(self)
     }
 }
 
-impl <G> PinGeneratorExt for G where G: Generator + Unpin {}
+impl<G> PinGeneratorExt for G where G: Generator + Unpin {}
 
 #[cfg(test)]
 mod tests {
